@@ -41,6 +41,10 @@ new #[Title('The Original Black Jean')] class extends Component {
         $this->justAdded = true;
         $this->dispatch('cart-updated');
     }
+        public function updatedSelectedVariantId(): void
+    {
+        $this->justAdded = false;
+    }
 };
 
 ?>

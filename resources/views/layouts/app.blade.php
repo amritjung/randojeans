@@ -17,6 +17,7 @@
                     <a href="{{ route('home') }}" class="hover:text-bone">Home</a>
                     <a href="{{ route('shop') }}" class="hover:text-bone">Shop</a>
                     <a href="{{ route('craft') }}" class="hover:text-bone">The Craft of Denim</a>
+                    <livewire:cart-badge />
                 </nav>
             </div>
         </header>
