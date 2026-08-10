@@ -104,7 +104,7 @@ new #[Title('Your Cart — Rando Jeans')] class extends Component {
             <span class="font-display text-2xl">${{ number_format($this->subtotal, 2) }} AUD</span>
         </div>
 
-        <a href="#"
+        <a href="{{ route('checkout') }}"
            class="block text-center mt-8 bg-copper hover:bg-copper-light text-ink font-medium py-4 transition">
             Checkout
         </a>
