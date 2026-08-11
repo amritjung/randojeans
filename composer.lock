@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fffcc2480693c6382f29f9b1d0246663",
+    "content-hash": "1c2dc5a22e9cae0d8670a314d0b12e10",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -510,6 +510,85 @@
                 }
             ],
             "time": "2026-03-20T21:10:52+00:00"
+        },
+        {
+            "name": "daikazu/filament-lightbox",
+            "version": "v2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/daikazu/filament-lightbox.git",
+                "reference": "b06fa35a9a4035ced48f2408c0c3e6547401acd2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/daikazu/filament-lightbox/zipball/b06fa35a9a4035ced48f2408c0c3e6547401acd2",
+                "reference": "b06fa35a9a4035ced48f2408c0c3e6547401acd2",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0||^5.0",
+                "filament/infolists": "^4.0||^5.0",
+                "filament/tables": "^4.0||^5.0",
+                "illuminate/contracts": "^11.0||^12.0||^13.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "larastan/larastan": "^2.9||^3.0",
+                "laravel/pint": "^1.14",
+                "nunomaduro/collision": "^8.1.1||^7.10.0",
+                "orchestra/testbench": "^9.0.0||^10.0||^11.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-arch": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0",
+                "phpstan/extension-installer": "^1.3",
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0.0",
+                "tightenco/duster": "^2.7||^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Daikazu\\FilamentLightbox\\FilamentLightboxServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Daikazu\\FilamentLightbox\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mike Wall",
+                    "email": "daikazu@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "This is my package filament-lightbox",
+            "homepage": "https://github.com/daikazu/filament-lightbox",
+            "keywords": [
+                "Mike Wall",
+                "daikazu",
+                "filament-lightbox",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/daikazu/filament-lightbox/issues",
+                "source": "https://github.com/daikazu/filament-lightbox/tree/v2.2.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Mike Wall",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-26T20:38:33+00:00"
         },
         {
             "name": "danharrin/date-format-converter",

@@ -37,6 +37,12 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            // Registers the lightbox plugin so any ->lightbox() call on an
+            // ImageColumn opens that image full-size in a popup when clicked,
+            // instead of just showing a small static thumbnail.
+            ->plugins([
+                \Daikazu\FilamentLightbox\LightBoxPlugin::make(),
+            ])
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,

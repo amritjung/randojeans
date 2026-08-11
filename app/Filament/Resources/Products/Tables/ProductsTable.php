@@ -8,6 +8,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\ImageColumn;
 
 class ProductsTable
 {
@@ -15,6 +16,16 @@ class ProductsTable
     {
         return $table
             ->columns([
+                ImageColumn::make('image')
+                    ->label('')
+                    // Pulls each product's primary image URL live from its images
+                    // relation, rather than storing a duplicate copy on the product
+                    // itself — one source of truth for "what is this product's photo."
+                    ->getStateUsing(fn ($record) => $record->primaryImage()?->url())
+                    ->square()
+                    // Clickable to view full-size, same lightbox behaviour as the
+                    // Images tab and the Order items thumbnail.
+                    ->lightbox(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('base_price')
