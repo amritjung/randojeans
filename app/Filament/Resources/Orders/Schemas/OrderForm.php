@@ -6,6 +6,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
+use Filament\Forms\Components\DateTimePicker;
 
 class OrderForm
 {
@@ -38,6 +39,28 @@ class OrderForm
                         'cancelled' => 'Cancelled',
                     ])
                     ->required(),
+
+                    Select::make('carrier')
+                    ->label('Carrier')
+                    ->options([
+                        'Australia Post' => 'Australia Post',
+                        'Sendle' => 'Sendle',
+                        'Shippit' => 'Shippit',
+                        'Other' => 'Other',
+                    ]),
+                
+                TextInput::make('tracking_number')
+                    ->label('Tracking number'),
+                
+                DateTimePicker::make('shipped_at')
+                    ->label('Shipped at')
+                    ->disabled()
+                    ->helperText('Set automatically when status changes to Shipped.'),
+                
+                DateTimePicker::make('delivered_at')
+                    ->label('Delivered at')
+                    ->disabled()
+                    ->helperText('Set automatically when status changes to Delivered.'),
 
                 TextInput::make('subtotal')
                     ->numeric()

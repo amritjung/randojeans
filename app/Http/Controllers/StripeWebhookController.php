@@ -19,21 +19,24 @@ class StripeWebhookController extends Controller
                 config('services.stripe.webhook_secret'),
             );
         } catch (SignatureVerificationException $e) {
-            Log::warning('Stripe webhook signature verification failed.');
+            Log::warning('Stripe webhook signature verification failed: ' . $e->getMessage());
             return response('Invalid signature', 400);
         }
 
         if ($event->type === 'checkout.session.completed') {
             $session = $event->data->object;
-
             $order = Order::where('stripe_checkout_session_id', $session->id)->first();
 
-            if ($order && $order->status === 'pending') {
+            if (! $order) {
+                // Worth keeping this log permanently — if it ever fires in
+                // production, it means Stripe confirmed a payment we have
+                // no matching order for, which would need investigating.
+                Log::warning("Stripe webhook: no order found for session {$session->id}");
+            } elseif ($order->status === 'pending') {
                 $order->update([
                     'status' => 'paid',
                     'stripe_payment_intent_id' => $session->payment_intent,
                 ]);
-
                 Log::info("Order {$order->order_number} marked paid via webhook.");
             }
         }

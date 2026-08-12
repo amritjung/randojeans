@@ -104,4 +104,16 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
             @endif
         </p>
     </div>
+    @if ($order->tracking_number)
+    <div class="border border-neutral-800 p-6 mt-6">
+        <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Tracking</p>
+        <p class="font-mono text-sm text-copper-light">{{ $order->tracking_number }}</p>
+        @if ($order->carrier)
+            <p class="text-neutral-400 text-sm mt-1">via {{ $order->carrier }}</p>
+        @endif
+        @if ($order->shipped_at)
+            <p class="text-neutral-500 text-xs mt-2">Shipped {{ $order->shipped_at->format('d M Y') }}</p>
+        @endif
+    </div>
+@endif
 </div>
