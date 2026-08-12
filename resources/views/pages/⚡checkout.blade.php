@@ -8,12 +8,19 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Stripe\Checkout\Session;
 use Stripe\Stripe;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 
 new #[Title('Checkout — Rando Jeans')] class extends Component {
     public $items;
     public string $email = '';
     public string $shipping_name = '';
-    public string $shipping_address = '';
+    public string $shipping_street = '';
+    public string $shipping_suburb = '';
+    public string $shipping_state = '';
+    public string $shipping_postcode = '';
+
+    public array $states = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
     public function mount(): void
     {
@@ -21,6 +28,27 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
 
         if ($this->items->isEmpty()) {
             redirect()->route('cart');
+            return;
+        }
+
+        // A logged-in user with an unverified email gets redirected to verify
+        // first — their order confirmation would otherwise go to an email
+        // address we've never actually confirmed they own. Guests aren't
+        // affected by this check at all (auth()->check() is false for them),
+        // since guest checkout intentionally doesn't require any account.
+        if (auth()->check() && ! auth()->user()->hasVerifiedEmail()) {
+            redirect()->route('verification.notice');
+            return;
+        }
+
+        if (auth()->check()) {
+            $user = auth()->user();
+            $this->email = $user->email;
+            $this->shipping_name = $user->name;
+            $this->shipping_street = $user->address_street ?? '';
+            $this->shipping_suburb = $user->address_suburb ?? '';
+            $this->shipping_state = $user->address_state ?? '';
+            $this->shipping_postcode = $user->address_postcode ?? '';
         }
     }
 
@@ -36,7 +64,6 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
 
     public function getGstProperty(): float
     {
-        // Prices are GST-inclusive (standard AU practice) — GST is the 1/11th component, not added on top.
         return round(($this->subtotal + $this->shippingCost) / 11, 2);
     }
 
@@ -47,17 +74,68 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
 
     public function submit(): void
     {
+            // Keyed by IP — this is specifically guarding against Stripe
+            // "card testing" fraud, where an attacker scripts rapid repeated
+            // checkout attempts with different stolen card numbers to find
+            // one that works. A genuine customer never needs more than a
+            // handful of checkout attempts in a short window.
+            $throttleKey = 'checkout|' . request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 8)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $this->addError('email', "Too many checkout attempts. Please try again in " . ceil($seconds / 60) . " minutes.");
+            return;
+        }
+
+        RateLimiter::hit($throttleKey, 600); // 10 minute decay — 8 attempts/10min/IP max
+
+        // Cache::lock() is an atomic lock — if two nearly-simultaneous
+            // requests both reach this line (e.g. a very fast double-click that
+            // slips past the disabled-button check), only ONE of them actually
+            // acquires the lock and proceeds. The other gets $lock->get() 
+            // returning false immediately and exits without creating a
+            // duplicate order. Keyed by session ID so it's specific to this
+            // one shopper's checkout attempt, not a global lock affecting
+            // every customer.
+            $lock = Cache::lock('checkout-submit-' . session()->getId(), 10);
+
+        if (! $lock->get()) {
+            // Someone (or some duplicate request) is already processing
+            // this exact checkout — silently do nothing rather than create
+            // a second order.
+            return;
+        }
+        try {
         $this->validate([
             'email' => 'required|email',
-            'shipping_name' => 'required|string|max:255',
-            'shipping_address' => 'required|string|max:500',
+            'shipping_name' => [
+                'required', 'string', 'max:255',
+                'regex:/^[A-Za-z\'\-]{2,}(\s[A-Za-z\'\-]{2,})+$/',
+            ],
+            'shipping_street' => 'required|string|max:255',
+            'shipping_suburb' => 'required|string|max:255',
+            'shipping_state' => 'required|in:NSW,VIC,QLD,WA,SA,TAS,ACT,NT',
+            'shipping_postcode' => 'required|digits:4',
+        ], [
+            'shipping_name.regex' => 'Please enter the recipient\'s full first and last name.',
+            'shipping_postcode.digits' => 'Postcode must be exactly 4 digits.',
         ]);
+
+        // Combine the structured fields into one readable line for the
+        // legacy shipping_address column, so anything still reading that
+        // column (e.g. an old admin view) still shows something sensible.
+        $combinedAddress = "{$this->shipping_street}, {$this->shipping_suburb} {$this->shipping_state} {$this->shipping_postcode}";
 
         $order = Order::create([
             'order_number' => 'RJ-' . strtoupper(Str::random(8)),
+            'user_id' => auth()->id(),
             'email' => $this->email,
             'shipping_name' => $this->shipping_name,
-            'shipping_address' => $this->shipping_address,
+            'shipping_address' => $combinedAddress,
+            'shipping_street' => $this->shipping_street,
+            'shipping_suburb' => $this->shipping_suburb,
+            'shipping_state' => $this->shipping_state,
+            'shipping_postcode' => $this->shipping_postcode,
             'status' => 'pending',
             'subtotal' => $this->subtotal,
             'shipping_cost' => $this->shippingCost,
@@ -110,6 +188,13 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
         $order->update(['stripe_checkout_session_id' => $session->id]);
 
         $this->redirect($session->url, navigate: false);
+        } finally {
+            // Always release the lock when we're done — whether the checkout
+            // succeeded, failed validation, or threw an error. Without this,
+            // a single failed attempt would lock the person out of retrying
+            // checkout for the full 10 seconds.
+            $lock->release();
+        }
     }
 };
 
@@ -133,14 +218,46 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             </div>
 
             <div>
-                <label class="font-mono text-xs uppercase tracking-widest text-neutral-500">Shipping address</label>
-                <textarea wire:model="shipping_address" rows="4" class="w-full mt-2 bg-transparent border border-neutral-700 focus:border-copper px-4 py-3 outline-none"></textarea>
-                @error('shipping_address') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                <label class="font-mono text-xs uppercase tracking-widest text-neutral-500">Street address</label>
+                <input type="text" wire:model="shipping_street" placeholder="12 Smith Street" class="w-full mt-2 bg-transparent border border-neutral-700 focus:border-copper px-4 py-3 outline-none">
+                @error('shipping_street') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
 
-            <button type="submit" class="w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition mt-4">
-                Continue to payment
-            </button>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-mono text-xs uppercase tracking-widest text-neutral-500">Suburb</label>
+                    <input type="text" wire:model="shipping_suburb" class="w-full mt-2 bg-transparent border border-neutral-700 focus:border-copper px-4 py-3 outline-none">
+                    @error('shipping_suburb') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="font-mono text-xs uppercase tracking-widest text-neutral-500">State</label>
+                    <select wire:model="shipping_state" class="w-full mt-2 bg-ink border border-neutral-700 focus:border-copper px-4 py-3 outline-none">
+                        <option value="">Select</option>
+                        @foreach ($states as $state)
+                            <option value="{{ $state }}">{{ $state }}</option>
+                        @endforeach
+                    </select>
+                    @error('shipping_state') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+
+            <div>
+                <label class="font-mono text-xs uppercase tracking-widest text-neutral-500">Postcode</label>
+                <input type="text" wire:model="shipping_postcode" maxlength="4" class="w-full mt-2 bg-transparent border border-neutral-700 focus:border-copper px-4 py-3 outline-none">
+                @error('shipping_postcode') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            <button type="submit"
+        {{-- wire:loading.attr="disabled" automatically disables this
+             button the instant the form starts submitting, and Livewire
+             re-enables it if something goes wrong — so a second click
+             during processing simply does nothing. --}}
+        wire:loading.attr="disabled"
+        wire:target="submit"
+        class="w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+    <span wire:loading.remove wire:target="submit">Continue to payment</span>
+    <span wire:loading wire:target="submit">Processing...</span>
+</button>
             <p class="font-mono text-[11px] text-neutral-600 text-center">You'll be redirected to Stripe to pay securely.</p>
         </div>
 

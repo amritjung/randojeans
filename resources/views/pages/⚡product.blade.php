@@ -150,11 +150,16 @@ new #[Title('The Original Black Jean')] class extends Component {
             </div>
 
             <button
-                wire:click="addToCart"
-                class="mt-8 w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition"
-            >
-                @if ($justAdded) Added ✓ @else Add to cart @endif
-            </button>
+    wire:click="addToCart"
+    wire:loading.attr="disabled"
+    wire:target="addToCart"
+    class="mt-8 w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
+>
+    <span wire:loading.remove wire:target="addToCart">
+        @if ($justAdded) Added ✓ @else Add to cart @endif
+    </span>
+    <span wire:loading wire:target="addToCart">Adding...</span>
+</button>
 
             <div class="mt-10 border border-neutral-800 p-5 font-mono text-xs text-neutral-500 leading-relaxed">
                 {{ $product->story }}

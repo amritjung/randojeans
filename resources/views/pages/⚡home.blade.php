@@ -25,7 +25,7 @@ new #[Title('Rando Jeans — Premium Black Denim')] class extends Component {
                 Cut and sewn in Vietnam from heavyweight denim built to hold its colour —
                 designed in Australia for people who wear one pair of jeans until they've earned their fade.
             </p>
-            <a href="{{ route('product.show', $featured) }}"
+            <a href="{{ route('shop') }}"
                class="inline-block mt-10 bg-copper hover:bg-copper-light text-ink font-medium px-10 py-4 transition">
                 Shop the jean
             </a>

@@ -18,6 +18,13 @@
                     <a href="{{ route('shop') }}" class="hover:text-bone">Shop</a>
                     <a href="{{ route('craft') }}" class="hover:text-bone">The Craft of Denim</a>
                     <livewire:cart-badge />
+                    {{-- Shows "Account" if logged in, "Login" if not — auth()->check()
+                         is Laravel's standard way to ask "is someone currently logged in?" --}}
+                    @auth
+                        <a href="{{ route('account') }}" class="hover:text-bone">Account</a>
+                    @else
+                        <a href="{{ route('login') }}" class="hover:text-bone">Login</a>
+                    @endauth
                 </nav>
             </div>
         </header>
