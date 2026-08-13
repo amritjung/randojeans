@@ -38,4 +38,15 @@ class Product extends Model
     {
         return $this->images->firstWhere('is_primary', true) ?? $this->images->first();
     }
+
+    public function isWishlistedBy(?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        return \App\Models\WishlistItem::where('user_id', $userId)
+            ->where('product_id', $this->id)
+            ->exists();
+    }
 }

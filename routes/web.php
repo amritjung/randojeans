@@ -52,3 +52,5 @@ Route::livewire('/forgot-password', 'pages::forgot-password')->name('password.re
 Route::livewire('/reset-password/{token}', 'pages::reset-password')->name('password.reset')->middleware('guest');
 
 Route::livewire('/account/orders/{order}/return', 'pages::request-return')->name('orders.return')->middleware('auth');
+
+Route::livewire('/wishlist', 'pages::wishlist')->name('wishlist')->middleware('auth');

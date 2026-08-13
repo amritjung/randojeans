@@ -135,6 +135,9 @@ new #[Title('The Original Black Jean')] class extends Component {
             <p class="mt-6 font-mono text-2xl text-copper-light">
                 ${{ number_format($this->selectedVariant?->price() ?? $product->base_price, 2) }} AUD
             </p>
+            <div class="mt-4">
+                <livewire:wishlist-heart :product="$product" :product-variant-id="$selectedVariantId" :key="'pdp-heart-'.$product->id" />
+            </div>
 
             <div class="my-8 border-t border-dashed border-neutral-700"></div>
 

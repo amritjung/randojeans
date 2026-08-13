@@ -21,6 +21,7 @@ new #[Title('Shop — Rando Jeans')] class extends Component {
 
     <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
         @foreach ($products as $product)
+        <div class="relative">
             <a href="{{ route('product.show', $product) }}" class="group block">
                 <div class="aspect-[3/4] bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden">
                     @if ($product->primaryImage())
@@ -32,6 +33,11 @@ new #[Title('Shop — Rando Jeans')] class extends Component {
                 <h2 class="font-display text-lg mt-4 group-hover:text-copper-light transition">{{ $product->name }}</h2>
                 <p class="font-mono text-sm text-neutral-500 mt-1">${{ number_format($product->base_price, 2) }} AUD</p>
             </a>
+        </a>
+        <div class="absolute top-3 right-3">
+            <livewire:wishlist-heart :product="$product" :key="'shop-heart-'.$product->id" />
+        </div>
+    </div>
         @endforeach
     </div>
 </div>
