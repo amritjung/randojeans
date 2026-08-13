@@ -12,6 +12,13 @@ new #[Title('The Original Black Jean')] class extends Component {
     public int $quantity = 1;
     public bool $justAdded = false;
 
+    public bool $canReview = false;
+    public ?int $reviewableOrderItemId = null;
+    public int $reviewRating = 5;
+    public string $reviewTitle = '';
+    public string $reviewBody = '';
+    public bool $reviewSubmitted = false;
+
 
     // Separate from $justAdded — this tracks "does the cart have anything
     // in it at all right now," which should stay true even after switching
@@ -23,6 +30,10 @@ new #[Title('The Original Black Jean')] class extends Component {
     {
         $this->product = $product->load('variants');
         $this->selectedVariantId = $this->product->variants->first(fn ($v) => $v->inStock())?->id;
+
+        $reviewableItem = $this->product->reviewableOrderItemFor(auth()->id());
+        $this->canReview = $reviewableItem !== null;
+        $this->reviewableOrderItemId = $reviewableItem?->id;
     }
 
     #[Computed]
@@ -50,9 +61,36 @@ new #[Title('The Original Black Jean')] class extends Component {
         $this->dispatch('cart-updated');
     }
     public function updatedSelectedVariantId(): void
-        {
+    {
             $this->justAdded = false;
-        }
+    }
+
+        public function submitReview(): void
+    {
+        $this->validate([
+            'reviewRating' => 'required|integer|min:1|max:5',
+            'reviewTitle' => 'nullable|string|max:255',
+            'reviewBody' => 'required|string|min:10|max:2000',
+        ]);
+
+        \App\Models\Review::create([
+            'product_id' => $this->product->id,
+            'user_id' => auth()->id(),
+            'order_item_id' => $this->reviewableOrderItemId,
+            'rating' => $this->reviewRating,
+            'title' => $this->reviewTitle,
+            'body' => $this->reviewBody,
+            'status' => 'pending',
+        ]);
+
+        $this->canReview = false;
+        $this->reviewSubmitted = true;
+
+        // Notify admins there's a review awaiting moderation, same pattern
+        // as new return requests.
+        $adminEmails = \App\Models\User::where('is_admin', true)->pluck('email');
+        \Illuminate\Support\Facades\Mail::to($adminEmails)->send(new \App\Mail\NewReview($this->product, auth()->user()));
+    }
 };
 
 ?>
@@ -208,6 +246,67 @@ new #[Title('The Original Black Jean')] class extends Component {
                     <dt class="text-neutral-500">Origin</dt>
                     <dd class="text-bone">{{ $product->origin }}</dd>
                 </dl>
+            </div>
+            <div id="reviews" class="mt-16 pt-16 border-t border-neutral-800">
+                <h2 class="font-display text-2xl mb-6">Reviews</h2>
+            
+                @if ($product->reviewCount() > 0)
+                    <div class="flex items-center gap-3 mb-8">
+                        <span class="font-mono text-2xl text-copper-light">{{ $product->averageRating() }}</span>
+                        <span class="text-neutral-500 text-sm">out of 5 — {{ $product->reviewCount() }} {{ Str::plural('review', $product->reviewCount()) }}</span>
+                    </div>
+                @else
+                    <p class="text-neutral-500 text-sm mb-8">No reviews yet.</p>
+                @endif
+            
+                @if ($canReview)
+                    <form wire:submit="submitReview" class="border border-neutral-800 p-6 mb-8 space-y-4">
+                        <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">Write a Review</p>
+            
+                        <div>
+                            <label class="text-xs text-neutral-500">Rating</label>
+                            <select wire:model="reviewRating" class="w-full mt-2 bg-ink border border-neutral-700 px-3 py-2 text-sm">
+                                @for ($i = 5; $i >= 1; $i--)
+                                    <option value="{{ $i }}">{{ $i }} star{{ $i > 1 ? 's' : '' }}</option>
+                                @endfor
+                            </select>
+                        </div>
+            
+                        <div>
+                            <label class="text-xs text-neutral-500">Title (optional)</label>
+                            <input type="text" wire:model="reviewTitle" class="w-full mt-2 bg-transparent border border-neutral-700 px-3 py-2 text-sm outline-none">
+                        </div>
+            
+                        <div>
+                            <label class="text-xs text-neutral-500">Your review</label>
+                            <textarea wire:model="reviewBody" rows="4" class="w-full mt-2 bg-transparent border border-neutral-700 px-3 py-2 text-sm outline-none"></textarea>
+                            @error('reviewBody') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+            
+                        <button type="submit" class="bg-copper hover:bg-copper-light text-ink text-sm font-medium px-6 py-2 transition">
+                            Submit Review
+                        </button>
+                    </form>
+                @elseif ($reviewSubmitted)
+                    <p class="text-copper-light text-sm mb-8">Thanks — your review is awaiting approval.</p>
+                @endif
+            
+                <div class="space-y-6">
+                    @forelse ($product->approvedReviews as $review)
+                        <div class="border-b border-neutral-800 pb-6">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-sm text-copper-light">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
+                                <span class="font-mono text-xs text-neutral-500">{{ $review->created_at->format('d M Y') }}</span>
+                            </div>
+                            @if ($review->title)
+                                <p class="mt-2 font-medium">{{ $review->title }}</p>
+                            @endif
+                            <p class="mt-2 text-neutral-400 text-sm">{{ $review->body }}</p>
+                            <p class="mt-2 font-mono text-xs text-neutral-600">{{ $review->user->name }} — Verified Purchase</p>
+                        </div>
+                    @empty
+                    @endforelse
+                </div>
             </div>
         </div>
     </div>

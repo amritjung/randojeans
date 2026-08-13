@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\OrderItem;
 
 class Product extends Model
 {
@@ -48,5 +49,51 @@ class Product extends Model
         return \App\Models\WishlistItem::where('user_id', $userId)
             ->where('product_id', $this->id)
             ->exists();
+    }
+
+    public function reviews(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    // Only ever counts APPROVED reviews — pending/rejected ones stay
+    // invisible to this calculation, so an unmoderated or rejected review
+    // can never affect the public-facing star rating.
+    public function approvedReviews()
+    {
+        return $this->reviews()->where('status', 'approved')->latest();
+    }
+
+    public function averageRating(): ?float
+    {
+        $avg = $this->approvedReviews()->avg('rating');
+        return $avg ? round($avg, 1) : null;
+    }
+
+    public function reviewCount(): int
+    {
+        return $this->approvedReviews()->count();
+    }
+
+    // A customer is eligible to review this product if they have a
+    // delivered order containing it, and haven't already reviewed it.
+    // Returns the specific OrderItem to link the review to (proof of
+    // purchase), or null if they're not eligible at all.
+    public function reviewableOrderItemFor(?int $userId): ?OrderItem
+    {
+        if (! $userId) {
+            return null;
+        }
+
+        $alreadyReviewed = $this->reviews()->where('user_id', $userId)->exists();
+        if ($alreadyReviewed) {
+            return null;
+        }
+
+        return OrderItem::whereHas('order', function ($query) use ($userId) {
+            $query->where('user_id', $userId)->where('status', 'delivered');
+        })
+        ->whereHas('productVariant', fn ($query) => $query->where('product_id', $this->id))
+        ->first();
     }
 }
