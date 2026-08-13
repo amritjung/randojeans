@@ -50,3 +50,5 @@ Route::livewire('/forgot-password', 'pages::forgot-password')->name('password.re
 // ResetPassword notification generates its emailed link using this
 // specific route name, so it has to match or the link breaks.
 Route::livewire('/reset-password/{token}', 'pages::reset-password')->name('password.reset')->middleware('guest');
+
+Route::livewire('/account/orders/{order}/return', 'pages::request-return')->name('orders.return')->middleware('auth');

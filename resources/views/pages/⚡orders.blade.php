@@ -69,7 +69,7 @@ new #[Title('Order History — Rando Jeans')] class extends Component {
                         </div>
                         <span class="font-mono text-xs uppercase tracking-widest px-3 py-1 border
                             {{ $order->status === 'paid' ? 'border-green-700 text-green-400' : 'border-neutral-700 text-neutral-400' }}">
-                            {{ $order->status }}
+                            {{ $order->statusLabel() }}
                         </span>
                         <p class="font-mono text-sm text-copper-light">${{ number_format($order->total, 2) }}</p>
                     </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderShipped;
 use App\Mail\OrderConfirmed;
@@ -31,6 +32,16 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function returnRequests(): HasMany
+{
+    return $this->hasMany(ReturnRequest::class);
+}
 
     // booted() runs once when the model class is first loaded, and is
     // where Eloquent model events (hooks that fire automatically on
@@ -74,4 +85,36 @@ class Order extends Model
             };
         });
     }
+    
+    // A return can only be requested once an order has actually been
+    // delivered (not while still pending/paid/shipped — the customer
+    // doesn't have the item yet), and within a 30-day window after
+    // delivery — a common, reasonable return policy window. Adjust the
+    // "30" if you want a different policy.
+    public function isReturnEligible(): bool
+    {
+        if ($this->status !== 'delivered' || ! $this->delivered_at) {
+            return false;
+        }
+
+        return $this->delivered_at->diffInDays(now()) <= 30
+            && $this->returnRequests->isEmpty(); // only one request per order
+    }
+
+    // Maps the raw database status value to a friendlier customer-facing
+// label. The stored value stays the same ('fulfilled' in the database
+// row, order form, etc.) — only how it's displayed changes, so no
+// data migration is needed for any orders already in this status.
+public function statusLabel(): string
+{
+    return match ($this->status) {
+        'pending' => 'Pending',
+        'paid' => 'Paid',
+        'fulfilled' => 'Ready to Ship',
+        'shipped' => 'Shipped',
+        'delivered' => 'Delivered',
+        'cancelled' => 'Cancelled',
+        default => ucfirst($this->status),
+    };
+}
 }

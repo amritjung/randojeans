@@ -12,6 +12,13 @@ new #[Title('The Original Black Jean')] class extends Component {
     public int $quantity = 1;
     public bool $justAdded = false;
 
+
+    // Separate from $justAdded — this tracks "does the cart have anything
+    // in it at all right now," which should stay true even after switching
+    // sizes, unlike $justAdded which is meant to reset (it's specifically
+    // about "was THIS size just added").
+    public bool $cartHasItems = false;
+
     public function mount(Product $product): void
     {
         $this->product = $product->load('variants');
@@ -39,12 +46,13 @@ new #[Title('The Original Black Jean')] class extends Component {
         $item->save();
 
         $this->justAdded = true;
+        $this->cartHasItems = true; // stays true from here on, regardless of size switching
         $this->dispatch('cart-updated');
     }
-        public function updatedSelectedVariantId(): void
-    {
-        $this->justAdded = false;
-    }
+    public function updatedSelectedVariantId(): void
+        {
+            $this->justAdded = false;
+        }
 };
 
 ?>
@@ -149,17 +157,31 @@ new #[Title('The Original Black Jean')] class extends Component {
                 </div>
             </div>
 
-            <button
-    wire:click="addToCart"
-    wire:loading.attr="disabled"
-    wire:target="addToCart"
-    class="mt-8 w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
->
-    <span wire:loading.remove wire:target="addToCart">
-        @if ($justAdded) Added ✓ @else Add to cart @endif
-    </span>
-    <span wire:loading wire:target="addToCart">Adding...</span>
-</button>
+            <div class="mt-8 flex gap-3">
+                <button
+                    wire:click="addToCart"
+                    wire:loading.attr="disabled"
+                    wire:target="addToCart"
+                    class="flex-1 bg-copper hover:bg-copper-light text-ink font-medium py-4 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span wire:loading.remove wire:target="addToCart">
+                        @if ($justAdded) Added ✓ @else Add to cart @endif
+                    </span>
+                    <span wire:loading wire:target="addToCart">Adding...</span>
+                </button>
+            
+                {{-- Only appears once something's actually been added — skips
+                     straight to checkout for someone who knows they want this and
+                     doesn't need to review their cart first. Since it's a plain
+                     link (not a Livewire action), it costs nothing extra to render
+                     and just relies on the session cart already having the item. --}}
+                     @if ($cartHasItems)
+                     <a href="{{ route('cart') }}"
+                        class="flex-1 flex items-center justify-center border border-copper text-copper-light hover:bg-copper hover:text-ink font-medium py-4 transition text-center">
+                         View Cart →
+                     </a>
+                 @endif
+            </div>
 
             <div class="mt-10 border border-neutral-800 p-5 font-mono text-xs text-neutral-500 leading-relaxed">
                 {{ $product->story }}

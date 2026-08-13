@@ -12,6 +12,9 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
     // and injects it here, so we don't have to manually look it up.
     public function mount(Order $order): void
     {
+        abort_unless($order->user_id === auth()->id(), 403);
+        $this->order = $order->load(['items', 'returnRequests']);
+
         // Security check: make sure this order actually belongs to the
         // logged-in user. Without this, anyone could view any order by
         // just guessing/changing the order ID in the URL — a classic
@@ -36,7 +39,7 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
         </div>
         <span class="font-mono text-xs uppercase tracking-widest px-3 py-1 border
             {{ $order->status === 'paid' ? 'border-green-700 text-green-400' : 'border-neutral-700 text-neutral-400' }}">
-            {{ $order->status }}
+            {{ $order->statusLabel() }}
         </span>
     </div>
 
@@ -104,6 +107,16 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
             @endif
         </p>
     </div>
+    @if ($order->returnRequests->isNotEmpty())
+    <div class="border border-neutral-800 p-6 mt-6">
+        <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-2">Return Status</p>
+        <p class="text-sm text-bone capitalize">{{ $order->returnRequests->first()->status }}</p>
+    </div>
+@elseif ($order->isReturnEligible())
+    <a href="{{ route('orders.return', $order) }}" class="block text-center mt-6 border border-neutral-700 hover:border-copper py-3 font-mono text-xs uppercase tracking-widest text-neutral-400 hover:text-bone transition">
+        Request a Return
+    </a>
+@endif
     @if ($order->tracking_number)
     <div class="border border-neutral-800 p-6 mt-6">
         <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Tracking</p>

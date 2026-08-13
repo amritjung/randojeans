@@ -22,8 +22,17 @@ class OrdersTable
                 TextColumn::make('shipping_name')
                     ->label('Customer')
                     ->searchable(),
-                TextColumn::make('status')
+                    TextColumn::make('status')
                     ->badge()
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'pending' => 'Pending',
+                        'paid' => 'Paid',
+                        'fulfilled' => 'Ready to Ship',
+                        'shipped' => 'Shipped',
+                        'delivered' => 'Delivered',
+                        'cancelled' => 'Cancelled',
+                        default => ucfirst($state),
+                    })
                     ->color(fn (string $state) => match ($state) {
                         'paid' => 'success',
                         'pending' => 'warning',
@@ -44,7 +53,7 @@ class OrdersTable
                 SelectFilter::make('status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',
-                    'fulfilled' => 'Fulfilled',
+                    'fulfilled' => 'Ready to Ship',
                     'shipped' => 'Shipped',
                     'delivered' => 'Delivered',
                     'cancelled' => 'Cancelled',

@@ -33,7 +33,7 @@ class OrderForm
                     ->options([
                         'pending' => 'Pending',
                         'paid' => 'Paid',
-                        'fulfilled' => 'Fulfilled',
+                        'fulfilled' => 'Ready to Ship',
                         'shipped' => 'Shipped',
                         'delivered' => 'Delivered',
                         'cancelled' => 'Cancelled',
