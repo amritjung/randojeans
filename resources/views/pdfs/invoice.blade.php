@@ -52,13 +52,13 @@
         </thead>
         <tbody>
             @foreach ($order->items as $item)
-                <tr>
-                    <td>{{ $item->product_name }}</td>
-                    <td>{{ $item->variant_label }}</td>
-                    <td class="right">{{ $item->quantity }}</td>
-                    <td class="right">${{ number_format($item->unit_price, 2) }}</td>
-                    <td class="right">${{ number_format($item->unit_price * $item->quantity, 2) }}</td>
-                </tr>
+            <tr>
+                <td>{{ $item->product_name }}@if ($item->wasOnSale()) <span style="color: #999; font-size: 10px;">(sale)</span>@endif</td>
+                <td>{{ $item->variant_label }}</td>
+                <td class="right">{{ $item->quantity }}</td>
+                <td class="right">${{ number_format($item->unit_price, 2) }}</td>
+                <td class="right">${{ number_format($item->unit_price * $item->quantity, 2) }}</td>
+            </tr>
             @endforeach
         </tbody>
     </table>
@@ -68,6 +68,12 @@
             <td class="label">Subtotal</td>
             <td class="right">${{ number_format($order->subtotal, 2) }}</td>
         </tr>
+        @if ($order->discount_amount > 0)
+        <tr>
+            <td class="label">Discount ({{ $order->discount_code }})</td>
+            <td class="right">-${{ number_format($order->discount_amount, 2) }}</td>
+        </tr>
+        @endif
         <tr>
             <td class="label">Shipping</td>
             <td class="right">{{ $order->shipping_cost > 0 ? '$' . number_format($order->shipping_cost, 2) : 'Free' }}</td>

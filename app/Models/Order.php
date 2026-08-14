@@ -17,7 +17,7 @@ class Order extends Model
         'shipping_street', 'shipping_suburb', 'shipping_state', 'shipping_postcode',
         'status', 'carrier', 'tracking_number', 'shipped_at', 'delivered_at',
         'subtotal', 'shipping_cost', 'gst', 'total',
-        'stripe_payment_intent_id', 'stripe_checkout_session_id',
+        'stripe_payment_intent_id', 'stripe_checkout_session_id', 'discount_code', 'discount_amount',
     ];
 
     protected function casts(): array

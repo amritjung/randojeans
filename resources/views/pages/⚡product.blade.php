@@ -170,8 +170,13 @@ new #[Title('The Original Black Jean')] class extends Component {
             <h1 class="font-display text-4xl leading-tight">{{ $product->name }}</h1>
             <p class="mt-3 text-neutral-400">{{ $product->description }}</p>
 
-            <p class="mt-6 font-mono text-2xl text-copper-light">
-                ${{ number_format($this->selectedVariant?->price() ?? $product->base_price, 2) }} AUD
+            <p class="mt-6 font-mono text-2xl">
+                @if ($product->isOnSale())
+                    <span class="text-neutral-600 line-through text-lg mr-2">${{ number_format($product->base_price, 2) }}</span>
+                    <span class="text-copper-light">${{ number_format($this->selectedVariant?->price() ?? $product->currentPrice(), 2) }} AUD</span>
+                @else
+                    <span class="text-copper-light">${{ number_format($this->selectedVariant?->price() ?? $product->base_price, 2) }} AUD</span>
+                @endif
             </p>
             <div class="mt-4">
                 <livewire:wishlist-heart :product="$product" :product-variant-id="$selectedVariantId" :key="'pdp-heart-'.$product->id" />

@@ -27,8 +27,15 @@
                         <p style="margin: 0; font-size: 14px;">{{ $item->product_name }}</p>
                         <p style="margin: 2px 0 0; font-size: 12px; color: #737373;">Size {{ $item->variant_label }} &times; {{ $item->quantity }}</p>
                     </div>
-                    <div style="display: table-cell; vertical-align: top; text-align: right; font-family: monospace; font-size: 14px;">
-                        ${{ number_format($item->unit_price * $item->quantity, 2) }}
+                    <div style="display: table-cell; vertical-align: top; text-align: right;">
+                        @if ($item->wasOnSale())
+                            <p style="margin: 0; font-family: monospace; font-size: 11px; color: #737373; text-decoration: line-through;">
+                                ${{ number_format($item->original_price * $item->quantity, 2) }}
+                            </p>
+                        @endif
+                        <p style="margin: 0; font-family: monospace; font-size: 14px; {{ $item->wasOnSale() ? 'color: #c9905f;' : '' }}">
+                            ${{ number_format($item->unit_price * $item->quantity, 2) }}
+                        </p>
                     </div>
                 </div>
             @endforeach
@@ -38,6 +45,12 @@
                     <span>Subtotal</span>
                     <span style="font-family: monospace;">${{ number_format($order->subtotal, 2) }}</span>
                 </div>
+                @if ($order->discount_amount > 0)
+                <div style="display: flex; justify-content: space-between; color: #c9905f; font-size: 14px; margin-bottom: 6px;">
+                    <span>Discount ({{ $order->discount_code }})</span>
+                    <span style="font-family: monospace;">-${{ number_format($order->discount_amount, 2) }}</span>
+                </div>
+            @endif
                 <div style="display: flex; justify-content: space-between; color: #a3a3a3; font-size: 14px; margin-bottom: 6px;">
                     <span>Shipping</span>
                     <span style="font-family: monospace;">{{ $order->shipping_cost > 0 ? '$' . number_format($order->shipping_cost, 2) : 'Free' }}</span>

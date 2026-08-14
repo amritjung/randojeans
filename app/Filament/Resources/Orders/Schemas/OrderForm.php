@@ -82,6 +82,15 @@ class OrderForm
                     ->numeric()
                     ->prefix('$')
                     ->disabled(),
+                TextInput::make('discount_code')
+                    ->label('Discount code used')
+                    ->disabled(),
+
+                TextInput::make('discount_amount')
+                    ->label('Discount amount')
+                    ->numeric()
+                    ->prefix('$')
+                    ->disabled(),
 
                 TextInput::make('stripe_checkout_session_id')
                     ->label('Stripe session ID')

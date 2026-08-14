@@ -10,7 +10,7 @@ class Product extends Model
 {
     protected $fillable = [
         'name', 'slug', 'description', 'story', 'fit', 'composition',
-        'weight_oz', 'weave', 'origin', 'base_price', 'status',
+        'weight_oz', 'weave', 'origin', 'base_price', 'status', 'sale_price',
     ];
 
     protected function casts(): array
@@ -95,5 +95,18 @@ class Product extends Model
         })
         ->whereHas('productVariant', fn ($query) => $query->where('product_id', $this->id))
         ->first();
+    }
+    public function isOnSale(): bool
+    {
+        return $this->sale_price !== null && $this->sale_price < $this->base_price;
+    }
+
+    // The price that actually applies right now — sale_price if genuinely
+    // on sale, otherwise the normal base_price. This is the single place
+    // that decision gets made, so everywhere else in the app can just call
+    // this instead of duplicating the "is it on sale" check repeatedly.
+    public function currentPrice(): float
+    {
+        return $this->isOnSale() ? (float) $this->sale_price : (float) $this->base_price;
     }
 }

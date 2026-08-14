@@ -39,6 +39,13 @@ class ProductForm
                     ->numeric()
                     ->prefix('$'),
 
+                TextInput::make('sale_price')
+                    ->label('Sale price (optional)')
+                    ->numeric()
+                    ->prefix('$')
+                    ->helperText('Leave blank for no sale. Must be lower than the base price to actually show as on sale.')
+                    ->lt('base_price'), // built-in Filament validation: must be Less Than the base_price field
+
                 Select::make('status')
                     ->options([
                         'draft' => 'Draft',

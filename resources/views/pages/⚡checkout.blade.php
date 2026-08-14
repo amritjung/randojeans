@@ -10,6 +10,9 @@ use Stripe\Checkout\Session;
 use Stripe\Stripe;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Discount;
+use App\Models\DiscountUsage;
+use Stripe\Coupon;
 
 new #[Title('Checkout — Rando Jeans')] class extends Component {
     public $items;
@@ -19,6 +22,9 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
     public string $shipping_suburb = '';
     public string $shipping_state = '';
     public string $shipping_postcode = '';
+    public string $discountCode = '';
+    public ?Discount $appliedDiscount = null;
+    public string $discountError = '';
 
     public array $states = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -57,6 +63,18 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
         return $this->items->sum(fn ($item) => $item->lineTotal());
     }
 
+    public function getDiscountAmountProperty(): float
+    {
+        if (! $this->appliedDiscount) {
+            return 0;
+        }
+
+        // Discount applies to the product subtotal only, not shipping —
+        // standard practice; a "10% off" code shouldn't also discount the
+        // delivery fee.
+        return round($this->subtotal * ($this->appliedDiscount->percentage / 100), 2);
+    }
+
     public function getShippingCostProperty(): float
     {
         return $this->subtotal >= 150 ? 0 : 12.00;
@@ -64,12 +82,75 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
 
     public function getGstProperty(): float
     {
-        return round(($this->subtotal + $this->shippingCost) / 11, 2);
+        $discountedSubtotal = $this->subtotal - $this->discountAmount;
+        return round(($discountedSubtotal + $this->shippingCost) / 11, 2);
     }
 
     public function getTotalProperty(): float
     {
-        return $this->subtotal + $this->shippingCost;
+        return $this->subtotal - $this->discountAmount + $this->shippingCost;
+    }
+
+    // public function getShippingCostProperty(): float
+    // {
+    //     return $this->subtotal >= 150 ? 0 : 12.00;
+    // }
+
+    // public function getGstProperty(): float
+    // {
+    //     return round(($this->subtotal + $this->shippingCost) / 11, 2);
+    // }
+
+    // public function getTotalProperty(): float
+    // {
+    //     return $this->subtotal + $this->shippingCost;
+    // }
+
+
+    public function applyDiscount(): void
+    {
+        $this->discountError = '';
+
+        if (blank($this->discountCode)) {
+            return;
+        }
+
+        // Stored/matched uppercase so "save10", "SAVE10", and "Save10" all
+        // work the same way — customers shouldn't be tripped up by casing.
+        $discount = Discount::where('code', strtoupper(trim($this->discountCode)))->first();
+
+        if (! $discount) {
+            $this->discountError = 'That code doesn\'t exist.';
+            return;
+        }
+
+        if (! $discount->isValid()) {
+            $this->discountError = 'That code has expired or is no longer active.';
+            return;
+        }
+
+        // Email must already be filled in to check per-customer usage — if
+        // it's blank (early in the form), ask for it first rather than
+        // silently skipping the check, which would let someone bypass
+        // single-use enforcement by applying the code before entering email.
+        if (blank($this->email)) {
+            $this->discountError = 'Please enter your email above first, then apply the code.';
+            return;
+        }
+
+        if ($discount->hasBeenUsedBy($this->email)) {
+            $this->discountError = 'This code has already been used on this email address.';
+            return;
+        }
+
+        $this->appliedDiscount = $discount;
+    }
+
+    public function removeDiscount(): void
+    {
+        $this->appliedDiscount = null;
+        $this->discountCode = '';
+        $this->discountError = '';
     }
 
     public function submit(): void
@@ -141,7 +222,27 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             'shipping_cost' => $this->shippingCost,
             'gst' => $this->gst,
             'total' => $this->total,
+            'discount_code' => $this->appliedDiscount?->code,
+            'discount_amount' => $this->discountAmount,
         ]);
+
+        if ($this->appliedDiscount) {
+            // Recorded now, at order creation, not waiting for payment
+            // confirmation. This is a deliberate tradeoff: it means a code
+            // technically gets "used up" even if the customer abandons payment
+            // on Stripe's page — but it closes off a worse problem, where
+            // someone could open multiple browser tabs and apply the same
+            // single-use code in several simultaneous pending orders before
+            // any of them completes payment. Given this is a low-stakes
+            // percentage-off code (not literally giving away free money), this
+            // tradeoff favours simplicity and closing the exploit over
+            // being lenient to the rare genuine abandoned-payment case.
+            DiscountUsage::create([
+                'discount_id' => $this->appliedDiscount->id,
+                'email' => $this->email,
+                'order_id' => $order->id,
+            ]);
+        }
 
         foreach ($this->items as $item) {
             OrderItem::create([
@@ -151,6 +252,7 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
                 'variant_label' => $item->productVariant->label(),
                 'quantity' => $item->quantity,
                 'unit_price' => $item->productVariant->price(),
+                'original_price' => $item->productVariant->product->base_price,
             ]);
         }
 
@@ -176,14 +278,32 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             ];
         }
 
-        $session = Session::create([
+        $sessionParams = [
             'payment_method_types' => ['card'],
             'line_items' => $lineItems,
             'mode' => 'payment',
             'customer_email' => $this->email,
             'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}&order=' . $order->order_number,
             'cancel_url' => route('checkout.cancel') . '?order=' . $order->order_number,
-        ]);
+        ];
+
+        if ($this->discountAmount > 0) {
+            // Stripe requires a real Coupon object to apply a discount — it
+            // doesn't support a negative-amount line item. This creates a
+            // one-off coupon just for this checkout session (duration: 'once'
+            // means it applies a single time and isn't reusable/stored beyond
+            // this), rather than a general reusable Stripe-side coupon.
+            $coupon = Coupon::create([
+                'amount_off' => (int) round($this->discountAmount * 100),
+                'currency' => 'aud',
+                'duration' => 'once',
+                'name' => $this->appliedDiscount->code,
+            ]);
+
+            $sessionParams['discounts'] = [['coupon' => $coupon->id]];
+        }
+
+        $session = Session::create($sessionParams);
 
         $order->update(['stripe_checkout_session_id' => $session->id]);
 
@@ -270,11 +390,36 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
                 </div>
             @endforeach
 
+            <div class="mb-4">
+                <div class="flex gap-2">
+                    <input type="text" wire:model="discountCode" placeholder="Discount code"
+                           class="flex-1 bg-transparent border border-neutral-700 focus:border-copper px-3 py-2 text-sm outline-none uppercase">
+                    <button type="button" wire:click="applyDiscount" class="border border-neutral-700 hover:border-copper px-4 text-xs font-mono uppercase">
+                        Apply
+                    </button>
+                </div>
+                @if ($discountError)
+                    <p class="text-red-400 text-xs mt-1">{{ $discountError }}</p>
+                @endif
+                @if ($appliedDiscount)
+                    <div class="flex items-center justify-between mt-2 text-xs text-copper-light">
+                        <span>{{ $appliedDiscount->code }} applied ({{ $appliedDiscount->percentage }}% off)</span>
+                        <button type="button" wire:click="removeDiscount" class="text-neutral-500 hover:text-red-400">Remove</button>
+                    </div>
+                @endif
+            </div>
+
             <div class="border-t border-dashed border-neutral-700 mt-4 pt-4 space-y-2 text-sm">
                 <div class="flex justify-between text-neutral-400">
                     <span>Subtotal</span>
                     <span class="font-mono">${{ number_format($this->subtotal, 2) }}</span>
                 </div>
+                @if ($this->discountAmount > 0)
+                    <div class="flex justify-between text-copper-light">
+                        <span>Discount</span>
+                        <span class="font-mono">-${{ number_format($this->discountAmount, 2) }}</span>
+                    </div>
+                @endif
                 <div class="flex justify-between text-neutral-400">
                     <span>Shipping</span>
                     <span class="font-mono">{{ $this->shippingCost > 0 ? '$' . number_format($this->shippingCost, 2) : 'Free' }}</span>

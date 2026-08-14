@@ -31,7 +31,14 @@ new #[Title('Shop — Rando Jeans')] class extends Component {
                     @endif
                 </div>
                 <h2 class="font-display text-lg mt-4 group-hover:text-copper-light transition">{{ $product->name }}</h2>
-                <p class="font-mono text-sm text-neutral-500 mt-1">${{ number_format($product->base_price, 2) }} AUD</p>
+                <p class="font-mono text-sm mt-1">
+                    @if ($product->isOnSale())
+                        <span class="text-neutral-600 line-through">${{ number_format($product->base_price, 2) }}</span>
+                        <span class="text-copper-light ml-2">${{ number_format($product->sale_price, 2) }} AUD</span>
+                    @else
+                        <span class="text-neutral-500">${{ number_format($product->base_price, 2) }} AUD</span>
+                    @endif
+                </p>
             </a>
         </a>
         <div class="absolute top-3 right-3">

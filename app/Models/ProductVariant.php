@@ -23,11 +23,15 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Falls back to the product's base price if this variant has no override —
-    // this is the one place "what does this variant cost" is decided.
+    // Priority order: a variant-specific override (rare — e.g. a
+    // particular size priced differently) wins first if set; otherwise,
+    // the product's sale price if it's actually on sale; otherwise, the
+    // normal base price. Because cart, checkout, and order totals all
+    // already call this one method, sale pricing now applies everywhere
+    // automatically without touching any of that logic separately.
     public function price(): float
     {
-        return (float) ($this->price_override ?? $this->product->base_price);
+        return (float) ($this->price_override ?? $this->product->currentPrice());
     }
 
     public function inStock(): bool

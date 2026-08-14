@@ -45,6 +45,11 @@ class ItemsRelationManager extends RelationManager
                     ->numeric(),
                 TextColumn::make('unit_price')
                     ->money('AUD'),
+                TextColumn::make('original_price')
+                    ->label('Original price')
+                    ->money('AUD')
+                    ->placeholder('—')
+                    ->visible(fn ($record) => $record?->wasOnSale() ?? true),
             ])
             // No header/record/toolbar actions — read-only, matches the
             // "receipt, not editable data" intent above.
