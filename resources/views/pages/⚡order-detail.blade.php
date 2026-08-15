@@ -29,16 +29,101 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
         ← Back to Order History
     </a>
 
-    <div class="flex items-center justify-between mt-6 mb-10">
+    {{-- Two-column grid: left side groups "what/where" (order number +
+     delivery address), right side groups "the facts" (date, quantity,
+     total) — stacks to a single column automatically on mobile via
+     grid-cols-1 md:grid-cols-2. --}}
+<div class="border border-neutral-800 p-6 mt-6 mb-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+    {{-- Left: Order number + Delivery address --}}
+    <div class="space-y-4">
         <div>
-            <h1 class="font-display text-3xl">{{ $order->order_number }}</h1>
-            <p class="text-neutral-500 text-sm mt-1">{{ $order->created_at->format('d M Y, g:ia') }}</p>
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">Order</p>
+            <p class="font-mono text-sm mt-1">{{ $order->order_number }}</p>
         </div>
-        <span class="font-mono text-xs uppercase tracking-widest px-3 py-1 border
-            {{ $order->status === 'paid' ? 'border-green-700 text-green-400' : 'border-neutral-700 text-neutral-400' }}">
-            {{ $order->statusLabel() }}
-        </span>
+
+        <div>
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">Delivery</p>
+            <p class="text-sm mt-1">
+                <span class="text-neutral-400">To: </span>{{ $order->shipping_name }}<br>
+                <span class="text-neutral-500">
+                    {{ $order->shipping_street ?? $order->shipping_address }},
+                    @if ($order->shipping_suburb)
+                        {{ strtoupper($order->shipping_suburb) }}, {{ $order->shipping_state }}, {{ $order->shipping_postcode }}
+                    @endif
+                </span>
+            </p>
+        </div>
     </div>
+
+    {{-- Right: Order Date, Item Qty, Total Paid --}}
+    <div class="space-y-4 md:border-l md:border-neutral-800 md:pl-8">
+        <div class="flex justify-between items-center">
+            <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Order Date</span>
+            <span class="font-mono text-sm">{{ $order->created_at->format('d M Y') }}</span>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Item Qty</span>
+            <span class="font-mono text-sm">{{ $order->items->sum('quantity') }} {{ Str::plural('Item', $order->items->sum('quantity')) }}</span>
+        </div>
+
+        <div class="flex justify-between items-center">
+            <span class="font-mono text-xs uppercase tracking-widest text-neutral-500">Total Paid</span>
+            <span class="font-mono text-sm text-copper-light">${{ number_format($order->total, 2) }}</span>
+        </div>
+    </div>
+</div>
+
+{{-- Delivery status: a simple horizontal progress indicator through
+     the four customer-relevant stages. Cancelled orders are handled
+     separately below rather than trying to fit into this progression. --}}
+<div class="mb-10">
+    <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-3">Delivery</p>
+
+    @if ($order->status === 'cancelled')
+        <span class="font-mono text-xs uppercase tracking-widest px-3 py-1 border border-red-900 text-red-400">
+            Cancelled
+        </span>
+    @else
+        @php
+            // Where this order sits in the simple 4-stage journey — used
+            // to decide which steps below show as "reached" (copper) vs
+            // still pending (neutral grey).
+            $stages = ['paid' => 'Paid', 'fulfilled' => 'Preparing', 'shipped' => 'Shipped', 'delivered' => 'Delivered'];
+            $stageKeys = array_keys($stages);
+            $currentIndex = array_search($order->status, $stageKeys);
+            $currentIndex = $currentIndex === false ? 0 : $currentIndex;
+        @endphp
+
+        <div class="flex items-center">
+            @foreach ($stages as $key => $label)
+                @php $reached = array_search($key, $stageKeys) <= $currentIndex; @endphp
+                <div class="flex items-center {{ ! $loop->last ? 'flex-1' : '' }}">
+                    <div class="flex flex-col items-center">
+                        <div class="w-2.5 h-2.5 rounded-full {{ $reached ? 'bg-copper' : 'bg-neutral-700' }}"></div>
+                        <span class="font-mono text-[10px] uppercase tracking-widest mt-2 {{ $reached ? 'text-copper-light' : 'text-neutral-600' }}">
+                            {{ $label }}
+                        </span>
+                    </div>
+                    @if (!$loop->last)
+                        <div class="flex-1 h-px {{ $reached && array_search($stageKeys[$loop->index + 1], $stageKeys) <= $currentIndex ? 'bg-copper' : 'bg-neutral-800' }} mx-2"></div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+
+        @if ($order->trackingUrl())
+            <a href="{{ $order->trackingUrl() }}" target="_blank" rel="noopener"
+               class="inline-block mt-6 bg-copper hover:bg-copper-light text-ink font-medium text-sm px-6 py-3 transition">
+                Track Order →
+            </a>
+        @elseif ($order->tracking_number)
+            <p class="mt-6 font-mono text-sm text-neutral-400">
+                Tracking: {{ $order->tracking_number }} ({{ $order->carrier }})
+            </p>
+        @endif
+    @endif
+</div>
 
     <div class="border border-neutral-800 p-6 mb-6">
         <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Items</p>
@@ -87,16 +172,7 @@ new #[Title('Order Details — Rando Jeans')] class extends Component {
     
         {{-- rest of the file (subtotal/shipping/total block) stays unchanged --}}
 
-    <div class="border border-neutral-800 p-6">
-        <p class="font-mono text-xs uppercase tracking-widest text-neutral-500 mb-4">Shipping To</p>
-        <p class="text-sm text-bone">{{ $order->shipping_name }}</p>
-        <p class="text-sm text-neutral-400 mt-1">
-            {{ $order->shipping_street ?? $order->shipping_address }}<br>
-            @if ($order->shipping_suburb)
-                {{ $order->shipping_suburb }} {{ $order->shipping_state }} {{ $order->shipping_postcode }}
-            @endif
-        </p>
-    </div>
+    
     @if ($order->discount_amount > 0)
     <div class="flex justify-between text-copper-light">
         <span>Discount ({{ $order->discount_code }})</span>

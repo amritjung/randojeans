@@ -38,8 +38,12 @@ Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
     ->middleware(['auth', 'signed', 'throttle:6,1'])
     ->name('verification.verify');
 
-Route::livewire('/profile', 'pages::profile')->name('profile')->middleware('auth');
-Route::livewire('/profile/edit', 'pages::profile-edit')->name('profile.edit')->middleware('auth');
+    Route::livewire('/profile', 'pages::profile')->name('profile')->middleware('auth');
+    Route::livewire('/profile/edit', 'pages::profile-edit')->name('profile.edit')->middleware('auth');
+    Route::livewire('/addresses', 'pages::addresses')->name('addresses')->middleware('auth');
+    Route::livewire('/addresses/edit', 'pages::addresses-edit')->name('addresses.edit')->middleware('auth');
+    Route::livewire('/security', 'pages::security')->name('security')->middleware('auth');
+    Route::livewire('/account/delete', 'pages::account-delete')->name('account.delete')->middleware('auth');
 
 Route::livewire('/account/orders', 'pages::orders')->name('orders')->middleware('auth');
 Route::livewire('/account/orders/{order}', 'pages::order-detail')->name('orders.show')->middleware('auth');

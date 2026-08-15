@@ -92,22 +92,6 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
         return $this->subtotal - $this->discountAmount + $this->shippingCost;
     }
 
-    // public function getShippingCostProperty(): float
-    // {
-    //     return $this->subtotal >= 150 ? 0 : 12.00;
-    // }
-
-    // public function getGstProperty(): float
-    // {
-    //     return round(($this->subtotal + $this->shippingCost) / 11, 2);
-    // }
-
-    // public function getTotalProperty(): float
-    // {
-    //     return $this->subtotal + $this->shippingCost;
-    // }
-
-
     public function applyDiscount(): void
     {
         $this->discountError = '';
@@ -229,7 +213,14 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
         $combinedAddress = "{$this->shipping_street}, {$this->shipping_suburb} {$this->shipping_state} {$this->shipping_postcode}";
 
         $order = Order::create([
-            'order_number' => 'RJ-' . strtoupper(Str::random(8)),
+        // Format: RJ-YYMMDD-XXXX — e.g. RJ-260815-K3M9 for an order placed
+        // 15 Aug 2026. The date prefix means you (or a customer reading
+        // it out over email) can tell roughly when an order was placed
+        // just by looking at the number, without opening it up — useful
+        // for quick sorting/support conversations. The 5 random characters
+        // at the end still keep it unique even with multiple orders on
+        // the same day.
+        'order_number' => 'RJ-' . now()->format('ymd') . '-' . strtoupper(Str::random(5)),
             'user_id' => auth()->id(),
             'email' => $this->email,
             'shipping_name' => $this->shipping_name,
@@ -388,18 +379,7 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
                 @error('shipping_postcode') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
 
-            <button type="submit"
-        {{-- wire:loading.attr="disabled" automatically disables this
-             button the instant the form starts submitting, and Livewire
-             re-enables it if something goes wrong — so a second click
-             during processing simply does nothing. --}}
-        wire:loading.attr="disabled"
-        wire:target="submit"
-        class="w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
-    <span wire:loading.remove wire:target="submit">Continue to payment</span>
-    <span wire:loading wire:target="submit">Processing...</span>
-</button>
-            <p class="font-mono text-[11px] text-neutral-600 text-center">You'll be redirected to Stripe to pay securely.</p>
+            
         </div>
 
         <div class="border border-neutral-800 p-6 h-fit">
@@ -454,6 +434,20 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
                     <span>${{ number_format($this->total, 2) }} AUD</span>
                 </div>
             </div>
+            {{-- Moved here from the form column — sits at the bottom of the
+            summary, right after the total, matching the standard checkout
+            pattern (the "place order" action lives with the price it's
+            confirming, not buried in the address form above it). This also
+            naturally fixes the mobile stacking order: form fields → summary
+            → button, rather than the button appearing before the summary. --}}
+        <button type="submit"
+        wire:loading.attr="disabled"
+        wire:target="submit"
+        class="w-full bg-copper hover:bg-copper-light text-ink font-medium py-4 transition mt-6 disabled:opacity-50 disabled:cursor-not-allowed">
+        <span wire:loading.remove wire:target="submit">Continue to payment</span>
+        <span wire:loading wire:target="submit">Processing...</span>
+        </button>
+        <p class="font-mono text-[11px] text-neutral-600 text-center mt-2">You'll be redirected to Stripe to pay securely.</p>
         </div>
     </form>
 </div>

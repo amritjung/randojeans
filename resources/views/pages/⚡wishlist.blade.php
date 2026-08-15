@@ -9,6 +9,7 @@ use App\Models\CartItem;
 new #[Title('Your Wishlist — Rando Jeans')] class extends Component {
     public $items;
 
+
     public function mount(): void
     {
         $this->loadItems();
@@ -33,6 +34,7 @@ new #[Title('Your Wishlist — Rando Jeans')] class extends Component {
             ->delete();
 
         $this->loadItems();
+        $this->dispatch('wishlist-updated');
     }
 
     public function updateVariant(int $wishlistItemId, int $variantId): void
@@ -48,10 +50,6 @@ new #[Title('Your Wishlist — Rando Jeans')] class extends Component {
     {
         $wishlistItem = $this->items->firstWhere('id', $wishlistItemId);
 
-        // Can't add to cart without knowing a size — this shouldn't
-        // normally be reachable since the button is hidden in that case
-        // (see the Blade template below), but checking here too means the
-        // action safely does nothing if it somehow gets called anyway.
         if (! $wishlistItem || ! $wishlistItem->product_variant_id) {
             return;
         }
@@ -70,18 +68,24 @@ new #[Title('Your Wishlist — Rando Jeans')] class extends Component {
         $item->quantity = ($item->exists ? $item->quantity : 0) + 1;
         $item->save();
 
-        $this->dispatch('cart-updated');
+        $wishlistItem->delete();
 
-        // A quick visual confirmation without navigating away — lets
-        // someone add several wishlisted items to cart one after another
-        // without leaving this page.
-        $this->dispatch('added-' . $wishlistItemId);
+        $this->dispatch('cart-updated');
+        $this->dispatch('wishlist-updated');
+        $this->loadItems();
+
+        // Dispatches a plain browser event with the message as a payload —
+        // Alpine (in the layout, see below) picks this up and handles the
+        // entire show/auto-hide/dismiss cycle itself, with zero further
+        // server round-trips needed for the toast's timing.
+        $this->dispatch('toast', message: 'Item moved to cart');
     }
 };
 
 ?>
 
 <div class="mx-auto max-w-5xl px-6 py-16">
+    
     <h1 class="font-display text-4xl mb-10">Your Wishlist</h1>
 
     @if ($items->isEmpty())
@@ -119,15 +123,12 @@ new #[Title('Your Wishlist — Rando Jeans')] class extends Component {
                     </div>
                     <div class="mt-2 flex gap-2">
                         @if ($item->product_variant_id)
-                            <button
-                                wire:click="addToCart({{ $item->id }})"
-                                x-data="{ added: false }"
-                                x-on:added-{{ $item->id }}.window="added = true; setTimeout(() => added = false, 2000)"
-                                class="flex-1 bg-copper hover:bg-copper-light text-ink text-xs font-medium py-2 transition"
-                            >
-                                <span x-show="!added">Add to Cart</span>
-                                <span x-show="added" x-cloak>Added ✓</span>
-                            </button>
+                        <button
+                        wire:click="addToCart({{ $item->id }})"
+                        class="flex-1 bg-copper hover:bg-copper-light text-ink text-xs font-medium py-2 transition"
+                    >
+                        Add to Cart
+                    </button>
                         @else
                             <p class="flex-1 text-center text-xs text-neutral-600 py-2 border border-neutral-800">
                                 Select a size to add

@@ -15,7 +15,7 @@ class Order extends Model
     protected $fillable = [
         'order_number', 'user_id', 'email', 'shipping_name', 'shipping_address',
         'shipping_street', 'shipping_suburb', 'shipping_state', 'shipping_postcode',
-        'status', 'carrier', 'tracking_number', 'shipped_at', 'delivered_at', 'review_reminder_sent_at',
+        'status', 'carrier', 'tracking_number', 'shipped_at', 'delivered_at',
         'subtotal', 'shipping_cost', 'gst', 'total',
         'stripe_payment_intent_id', 'stripe_checkout_session_id', 'discount_code', 'discount_amount',
     ];
@@ -106,15 +106,32 @@ class Order extends Model
 // row, order form, etc.) — only how it's displayed changes, so no
 // data migration is needed for any orders already in this status.
 public function statusLabel(): string
-{
-    return match ($this->status) {
-        'pending' => 'Pending',
-        'paid' => 'Paid',
-        'fulfilled' => 'Ready to Ship',
-        'shipped' => 'Shipped',
-        'delivered' => 'Delivered',
-        'cancelled' => 'Cancelled',
-        default => ucfirst($this->status),
-    };
-}
+    {
+        return match ($this->status) {
+            'pending' => 'Pending',
+            'paid' => 'Paid',
+            'fulfilled' => 'Ready to Ship',
+            'shipped' => 'Shipped',
+            'delivered' => 'Delivered',
+            'cancelled' => 'Cancelled',
+            default => ucfirst($this->status),
+        };
+    }
+    // Builds a direct tracking link where I'm reasonably confident of the
+    // URL format, falls back to null (just show the tracking number as
+    // plain text, no clickable link) where I'm not — a broken link is
+    // worse than no link. TEST WITH A REAL TRACKING NUMBER before trusting
+    // the Australia Post / Sendle links in production.
+public function trackingUrl(): ?string
+    {
+        if (! $this->tracking_number || ! $this->carrier) {
+            return null;
+        }
+
+        return match ($this->carrier) {
+            'Australia Post' => "https://auspost.com.au/mypost/track/#/details/{$this->tracking_number}",
+            'Sendle' => "https://track.sendle.com/tracking?ref={$this->tracking_number}",
+            default => null, // Shippit and others: no reliable direct-link format confirmed
+        };
+    }
 }

@@ -22,7 +22,11 @@ new #[Title('Order History — Rando Jeans')] class extends Component {
 ?>
 
 <div class="mx-auto max-w-3xl px-6 py-16">
-    <h1 class="font-display text-4xl mb-10">Order History</h1>
+    <a href="{{ route('account') }}" class="font-mono text-xs uppercase tracking-widest text-neutral-500 hover:text-bone">
+        ← Back to Account
+    </a>
+
+    <h1 class="font-display text-4xl mt-6 mb-10">Order History</h1>
 
     @if ($orders->isEmpty())
         <div class="border border-neutral-800 p-10 text-center">

@@ -19,7 +19,7 @@ new #[Title('Shop — Rando Jeans')] class extends Component {
     <h1 class="font-display text-4xl mb-2">Shop</h1>
     <p class="text-neutral-400 mb-12">Every style we make, all built the same way: heavyweight denim, black, made to last.</p>
 
-    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         @foreach ($products as $product)
         <div class="relative">
             <a href="{{ route('product.show', $product) }}" class="group block">
