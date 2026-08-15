@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\Discount;
 use App\Models\DiscountUsage;
 use Stripe\Coupon;
+use Illuminate\Support\Facades\Log;
 
 new #[Title('Checkout — Rando Jeans')] class extends Component {
     public $items;
@@ -115,8 +116,27 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             return;
         }
 
-        // Stored/matched uppercase so "save10", "SAVE10", and "Save10" all
-        // work the same way — customers shouldn't be tripped up by casing.
+        // Keyed by IP — this is guarding against exactly the same class of
+        // attack as the checkout/login throttles: someone scripting rapid
+        // repeated guesses to brute-force-discover a valid discount code
+        // (codes like "SAVE10" are short and guessable at scale if nothing
+        // stops rapid automated attempts).
+        $throttleKey = 'discount-attempt|' . request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            // Logged, not just silently blocked — so if this ever actually
+            // fires in production, you have a record to notice a real
+            // attack pattern rather than it happening invisibly.
+            Log::warning("Discount code brute-force throttle hit from IP " . request()->ip());
+
+            $this->discountError = "Too many attempts. Please try again in " . ceil($seconds / 60) . " minute(s).";
+            return;
+        }
+
+        RateLimiter::hit($throttleKey, 600); // 10 attempts per 10 minutes per IP
+
         $discount = Discount::where('code', strtoupper(trim($this->discountCode)))->first();
 
         if (! $discount) {
@@ -129,10 +149,6 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             return;
         }
 
-        // Email must already be filled in to check per-customer usage — if
-        // it's blank (early in the form), ask for it first rather than
-        // silently skipping the check, which would let someone bypass
-        // single-use enforcement by applying the code before entering email.
         if (blank($this->email)) {
             $this->discountError = 'Please enter your email above first, then apply the code.';
             return;
@@ -142,6 +158,11 @@ new #[Title('Checkout — Rando Jeans')] class extends Component {
             $this->discountError = 'This code has already been used on this email address.';
             return;
         }
+
+        // A successful application clears this IP's attempt count — so a
+        // legitimate customer who mistyped a code a couple of times before
+        // getting it right isn't left sitting near the limit unnecessarily.
+        RateLimiter::clear($throttleKey);
 
         $this->appliedDiscount = $discount;
     }
