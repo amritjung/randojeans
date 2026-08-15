@@ -32,7 +32,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 // creates/updates a User passes an explicit array of fields (never
 // raw, unfiltered request input) — so even though is_admin is
 // mass-assignable, no public-facing form actually includes that key.
-#[Fillable(['name', 'email', 'password', 'phone', 'is_admin', 'address_street', 'address_suburb', 'address_state', 'address_postcode'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'is_admin', 'email_verified_at', 'address_street', 'address_suburb', 'address_state', 'address_postcode'])]
 #[Hidden(['password', 'remember_token'])]
 
 // MustVerifyEmail is a Laravel interface — implementing it enables all
