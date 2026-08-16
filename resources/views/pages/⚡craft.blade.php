@@ -138,7 +138,6 @@ new #[Title('The Craft of Denim — Rando Jeans')] class extends Component {
 
         <section id="philosophy" class="border-t border-dashed border-neutral-700 pt-16">
             <h2 class="font-display text-2xl text-bone mb-3">20. Our Denim Philosophy</h2>
-            <p class="text-neutral-500 text-sm font-mono mb-6">[Draft — personalise once your supplier and fabric spec are confirmed]</p>
             <p><strong class="text-bone">Why black?</strong> Because it's the one colour that goes from workwear to formal without changing, and doesn't chase seasonal fade trends the way indigo washes do.</p>
             <p class="mt-4"><strong class="text-bone">Why heavier denim?</strong> [Fill in once fabric weight is chosen.]</p>
             <p class="mt-4"><strong class="text-bone">Why 100% cotton?</strong> [If confirmed — natural fibre breathability and a more authentic aging pattern.]</p>

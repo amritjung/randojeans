@@ -19,6 +19,7 @@ new #[Title('The Original Black Jean')] class extends Component {
     public string $reviewBody = '';
     public bool $reviewSubmitted = false;
 
+    public \App\Models\SiteSetting $settings;
 
     // Separate from $justAdded — this tracks "does the cart have anything
     // in it at all right now," which should stay true even after switching
@@ -34,6 +35,8 @@ new #[Title('The Original Black Jean')] class extends Component {
         $reviewableItem = $this->product->reviewableOrderItemFor(auth()->id());
         $this->canReview = $reviewableItem !== null;
         $this->reviewableOrderItemId = $reviewableItem?->id;
+
+        $this->settings = \App\Models\SiteSetting::current();
     }
 
     #[Computed]
@@ -95,8 +98,7 @@ new #[Title('The Original Black Jean')] class extends Component {
 
 ?>
 
-<div class="min-h-screen">
-    <div class="mx-auto max-w-5xl px-6 py-16 grid md:grid-cols-2 gap-16">
+<div class="mx-auto max-w-5xl px-6 py-16 grid md:grid-cols-2 gap-16">
 
         <div
     x-data="{

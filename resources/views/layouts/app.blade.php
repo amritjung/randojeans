@@ -13,7 +13,22 @@
         {{-- x-data holds whether the mobile menu is open. Alpine.js handles
      this purely client-side — no server round-trip needed just to
      toggle a menu open/closed. --}}
-<header x-data="{ mobileMenuOpen: false }" class="border-b border-neutral-800 relative">
+     <header
+    {{-- Always starts false, regardless of the browser's restored scroll
+     position on reload — avoids the header incorrectly starting in
+     its 'scrolled' state if you'd previously scrolled down before
+     refreshing. The scroll listener immediately corrects it either
+     way within the first scroll event, so this only matters for that
+     very first instant of page load. --}}
+x-data="{ mobileMenuOpen: false, scrolled: false }"
+    x-on:scroll.window="scrolled = window.scrollY > 50"
+    class="fixed inset-x-0 top-0 z-30 transition-all duration-300"
+    {{-- Homepage: fully transparent at the top (clean hero, no tint),
+         switching to the frosted-glass treatment once scrolled past
+         50px. Every other page: always frosted, since there's no hero
+         to show cleanly — consistent legibility from the first pixel. --}}
+    :class="scrolled ? 'bg-ink/40 backdrop-blur-md border-b border-white/10' : 'bg-transparent border-transparent'"
+>
     <div class="mx-auto max-w-5xl px-6 py-5 flex items-center justify-between">
         <a href="{{ route('home') }}" class="font-display text-lg tracking-wide">Rando Jeans</a>
 
@@ -88,9 +103,13 @@
     </nav>
 </header>
 
-        <main>
-            {{ $slot }}
-        </main>
+{{-- Skip the top padding specifically on the homepage — the hero
+     needs to extend all the way to the true top of the page (y=0) so
+     the transparent/frosted header has an actual image behind it to
+     reveal, rather than a gap of plain page background. --}}
+     <main class="{{ request()->routeIs('home') ? '' : 'pt-20' }}">
+        {{ $slot }}
+    </main>
 
         <footer class="border-t border-neutral-800 mt-24">
             <div class="mx-auto max-w-5xl px-6 py-10 font-mono text-xs text-neutral-500">
