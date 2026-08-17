@@ -11,12 +11,29 @@ class Product extends Model
     protected $fillable = [
         'name', 'slug', 'description', 'story', 'fit', 'composition',
         'weight_oz', 'weave', 'origin', 'base_price', 'status', 'sale_price',
+        'art_number', 'model_note', 'low_in_stock',
+        'shipping_carrier', 'shipping_note', 'returns_days',
+        'colors', 'size_groups', 'washing_instructions',
+        'size_fit_tag', 'size_fit_chips', 'size_fit_body',
+        'description_tag', 'description_body', 'description_bullets',
+        'care_instructions', 'sustainability_tag', 'sustainability_message',
+        'manufacturing_origins', 'custom_sections', 'section_order',
     ];
 
     protected function casts(): array
     {
         return [
-            'base_price' => 'decimal:2',
+            'base_price'            => 'decimal:2',
+            'sale_price'            => 'decimal:2',
+            'low_in_stock'          => 'boolean',
+            'colors'                => 'array',
+            'size_groups'           => 'array',
+            'washing_instructions'  => 'array',
+            'size_fit_chips'        => 'array',
+            'description_bullets'   => 'array',
+            'manufacturing_origins' => 'array',
+            'custom_sections'       => 'array',
+            'section_order'         => 'array',
         ];
     }
 
@@ -45,20 +62,16 @@ class Product extends Model
         if (! $userId) {
             return false;
         }
-
         return \App\Models\WishlistItem::where('user_id', $userId)
             ->where('product_id', $this->id)
             ->exists();
     }
 
-    public function reviews(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
     }
 
-    // Only ever counts APPROVED reviews — pending/rejected ones stay
-    // invisible to this calculation, so an unmoderated or rejected review
-    // can never affect the public-facing star rating.
     public function approvedReviews()
     {
         return $this->reviews()->where('status', 'approved')->latest();
@@ -75,36 +88,27 @@ class Product extends Model
         return $this->approvedReviews()->count();
     }
 
-    // A customer is eligible to review this product if they have a
-    // delivered order containing it, and haven't already reviewed it.
-    // Returns the specific OrderItem to link the review to (proof of
-    // purchase), or null if they're not eligible at all.
     public function reviewableOrderItemFor(?int $userId): ?OrderItem
     {
         if (! $userId) {
             return null;
         }
-
         $alreadyReviewed = $this->reviews()->where('user_id', $userId)->exists();
         if ($alreadyReviewed) {
             return null;
         }
-
         return OrderItem::whereHas('order', function ($query) use ($userId) {
             $query->where('user_id', $userId)->where('status', 'delivered');
         })
         ->whereHas('productVariant', fn ($query) => $query->where('product_id', $this->id))
         ->first();
     }
+
     public function isOnSale(): bool
     {
         return $this->sale_price !== null && $this->sale_price < $this->base_price;
     }
 
-    // The price that actually applies right now — sale_price if genuinely
-    // on sale, otherwise the normal base_price. This is the single place
-    // that decision gets made, so everywhere else in the app can just call
-    // this instead of duplicating the "is it on sale" check repeatedly.
     public function currentPrice(): float
     {
         return $this->isOnSale() ? (float) $this->sale_price : (float) $this->base_price;

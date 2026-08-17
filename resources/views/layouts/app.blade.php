@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
     <head>
+        @stack('head-scripts')
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ $title ?? config('app.name', 'Laravel') }}</title>
@@ -20,8 +21,8 @@
      refreshing. The scroll listener immediately corrects it either
      way within the first scroll event, so this only matters for that
      very first instant of page load. --}}
-x-data="{ mobileMenuOpen: false, scrolled: false }"
-    x-on:scroll.window="scrolled = window.scrollY > 50"
+x-data="{ mobileMenuOpen: false, scrolled: {{ request()->routeIs('product.show') ? 'false' : 'window.scrollY > 50' }} }"
+x-init="scrolled = {{ request()->routeIs('product.show') ? 'false' : 'window.scrollY > 50' }}"
     class="fixed inset-x-0 top-0 z-30 transition-all duration-300"
     {{-- Homepage: fully transparent at the top (clean hero, no tint),
          switching to the frosted-glass treatment once scrolled past
@@ -107,7 +108,7 @@ x-data="{ mobileMenuOpen: false, scrolled: false }"
      needs to extend all the way to the true top of the page (y=0) so
      the transparent/frosted header has an actual image behind it to
      reveal, rather than a gap of plain page background. --}}
-     <main class="{{ request()->routeIs('home') ? '' : 'pt-20' }}">
+     <main class="{{ request()->routeIs('home') || request()->routeIs('product.show') ? '' : 'pt-20' }}">
         {{ $slot }}
     </main>
 

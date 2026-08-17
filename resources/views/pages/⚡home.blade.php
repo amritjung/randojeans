@@ -39,7 +39,7 @@ new #[Title('Rando Jeans — Premium Black Denim')] class extends Component {
         <div class="relative z-10 w-full bg-gradient-to-t from-ink via-ink/60 to-transparent pt-32 pb-16 px-6 text-center">
             <p class="font-mono text-xs tracking-widest text-copper-light uppercase mb-4">One jean. Done properly.</p>
             <h1 class="font-display text-5xl md:text-7xl leading-tight">Create Tomorrow's<br>Wardrobe.</h1>
-            <a href="{{ route('product.show', $featured) }}"
+            <a href="{{ route('shop') }}"
                class="inline-block mt-8 bg-copper hover:bg-copper-light text-ink font-medium px-10 py-4 transition">
                 Shop the Jean
             </a>
