@@ -20,6 +20,8 @@ class ManageHomepage extends Page implements HasSchemas
 
     protected static ?string $navigationLabel = 'Homepage';
 
+    protected static string|\BackedEnum|null $navigationIcon = \Filament\Support\Icons\Heroicon::OutlinedHome;
+
     public ?array $data = [];
 
     public function mount(): void

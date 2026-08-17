@@ -3,15 +3,25 @@
 use App\Models\Product;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Shop — Rando Jeans')] class extends Component {
-    public $products;
+    use WithPagination;
+
     public \App\Models\SiteSetting $settings;
 
     public function mount(): void
     {
-        $this->products = Product::where('status', 'active')->orderBy('name')->get();
         $this->settings = \App\Models\SiteSetting::current();
+    }
+
+    public function with(): array
+    {
+        return [
+            'products' => Product::where('status', 'active')
+                ->orderBy('name')
+                ->paginate(9),
+        ];
     }
 };
 
@@ -71,5 +81,26 @@ new #[Title('Shop — Rando Jeans')] class extends Component {
             </p>
         </a>
     @endforeach
+</div>
+
+    @if($products->hasPages())
+    <div class="mt-12 flex justify-center gap-2 font-mono text-xs">
+        @if($products->onFirstPage())
+            <span class="px-4 py-2 border border-neutral-800 text-neutral-700">← Prev</span>
+        @else
+            <button wire:click="previousPage" class="px-4 py-2 border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-bone transition">← Prev</button>
+        @endif
+
+        <span class="px-4 py-2 text-neutral-500">
+            {{ $products->currentPage() }} / {{ $products->lastPage() }}
+        </span>
+
+        @if($products->hasMorePages())
+            <button wire:click="nextPage" class="px-4 py-2 border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-bone transition">Next →</button>
+        @else
+            <span class="px-4 py-2 border border-neutral-800 text-neutral-700">Next →</span>
+        @endif
+    </div>
+    @endif
 </div>
 </div>

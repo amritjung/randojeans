@@ -122,6 +122,7 @@ class ProductForm
                                 ->addActionLabel('Add colour')
                                 ->reorderable()
                                 ->collapsible()
+                                ->collapsed()
                                 ->itemLabel(fn (array $state) => $state['name'] ?? 'New colour'),
                         ]),
 
@@ -150,7 +151,7 @@ class ProductForm
                                 ])
                                 ->addActionLabel('Add size group')
                                 ->reorderable()
-                                ->collapsible()
+                                ->collapsed()
                                 ->itemLabel(fn (array $state) => $state['label'] ?? 'New group'),
                         ]),
                     ]),

@@ -20,6 +20,7 @@ new #[Title('The Original Black Jean')] class extends Component {
     public string $reviewTitle = '';
     public string $reviewBody = '';
     public bool $reviewSubmitted = false;
+    public int $reviewsPerPage = 5;
 
     public \App\Models\SiteSetting $settings;
     public bool $cartHasItems = false;
@@ -144,6 +145,11 @@ new #[Title('The Original Black Jean')] class extends Component {
 
         $adminEmails = \App\Models\User::where('is_admin', true)->pluck('email');
         \Illuminate\Support\Facades\Mail::to($adminEmails)->send(new \App\Mail\NewReview($this->product, auth()->user()));
+    }
+
+    public function loadMoreReviews(): void
+    {
+        $this->reviewsPerPage += 5;
     }
 };
 
@@ -437,7 +443,7 @@ new #[Title('The Original Black Jean')] class extends Component {
     </div>
 
     {{-- ── FULL WIDTH BELOW GRID ───────────────────────────────────────── --}}
-    <div class="mt-16 border-t border-neutral-800 pt-12" x-data="{ open: null }">
+    <div class="mt-16 pt-4" x-data="{ open: null }">
 
         {{-- The Story --}}
         @if($product->story)
@@ -450,12 +456,7 @@ new #[Title('The Original Black Jean')] class extends Component {
         {{-- Accordions --}}
         <div class="border-t border-neutral-800">
 
-                {{-- placeholder to maintain structure --}}
-                @if(false)
-                <div class="border-b border-neutral-800">
-                @endif
-
-                {{-- Description & Care --}}
+{{-- Description & Care --}}
                 @if($product->description_body || $product->description_bullets || $product->washing_instructions)
                 <div class="border-b border-neutral-800">
                     <button @click="open = open === 'care' ? null : 'care'"
@@ -567,7 +568,7 @@ new #[Title('The Original Black Jean')] class extends Component {
     </div>
 
     {{-- ── REVIEWS ─────────────────────────────────────────────────────── --}}
-    <div id="reviews" class="mt-16 pt-16 border-t border-neutral-800">
+    <div id="reviews" class="mt-16 pt-16">
         <h2 class="font-display text-2xl mb-6">Reviews</h2>
 
         @if ($product->reviewCount() > 0)
@@ -606,7 +607,8 @@ new #[Title('The Original Black Jean')] class extends Component {
         @endif
 
         <div class="space-y-6">
-            @forelse ($product->approvedReviews as $review)
+            @php $pagedReviews = $product->approvedReviews()->take($reviewsPerPage)->get(); @endphp
+            @forelse ($pagedReviews as $review)
                 <div class="border-b border-neutral-800 pb-6">
                     <div class="flex items-center justify-between">
                         <span class="font-mono text-sm text-copper-light">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</span>
@@ -620,6 +622,13 @@ new #[Title('The Original Black Jean')] class extends Component {
                 </div>
             @empty
             @endforelse
+
+            @if($product->reviewCount() > $reviewsPerPage)
+            <button wire:click="loadMoreReviews"
+                    class="mt-6 w-full border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-bone font-mono text-xs uppercase tracking-widest py-3 transition">
+                Load more reviews ({{ $product->reviewCount() - $reviewsPerPage }} remaining)
+            </button>
+            @endif
         </div>
     </div>
 
