@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\ProductFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\OrderItem;
 
 class Product extends Model
 {
+    /** @use HasFactory<ProductFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'name', 'slug', 'description', 'story', 'fit', 'composition',
         'weight_oz', 'weave', 'origin', 'base_price', 'status', 'sale_price',
@@ -23,17 +27,17 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'base_price'            => 'decimal:2',
-            'sale_price'            => 'decimal:2',
-            'low_in_stock'          => 'boolean',
-            'colors'                => 'array',
-            'size_groups'           => 'array',
-            'washing_instructions'  => 'array',
-            'size_fit_chips'        => 'array',
-            'description_bullets'   => 'array',
+            'base_price' => 'decimal:2',
+            'sale_price' => 'decimal:2',
+            'low_in_stock' => 'boolean',
+            'colors' => 'array',
+            'size_groups' => 'array',
+            'washing_instructions' => 'array',
+            'size_fit_chips' => 'array',
+            'description_bullets' => 'array',
             'manufacturing_origins' => 'array',
-            'custom_sections'       => 'array',
-            'section_order'         => 'array',
+            'custom_sections' => 'array',
+            'section_order' => 'array',
         ];
     }
 
@@ -62,7 +66,8 @@ class Product extends Model
         if (! $userId) {
             return false;
         }
-        return \App\Models\WishlistItem::where('user_id', $userId)
+
+        return WishlistItem::where('user_id', $userId)
             ->where('product_id', $this->id)
             ->exists();
     }
@@ -80,6 +85,7 @@ class Product extends Model
     public function averageRating(): ?float
     {
         $avg = $this->approvedReviews()->avg('rating');
+
         return $avg ? round($avg, 1) : null;
     }
 
@@ -97,11 +103,12 @@ class Product extends Model
         if ($alreadyReviewed) {
             return null;
         }
+
         return OrderItem::whereHas('order', function ($query) use ($userId) {
             $query->where('user_id', $userId)->where('status', 'delivered');
         })
-        ->whereHas('productVariant', fn ($query) => $query->where('product_id', $this->id))
-        ->first();
+            ->whereHas('productVariant', fn ($query) => $query->where('product_id', $this->id))
+            ->first();
     }
 
     public function isOnSale(): bool

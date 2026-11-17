@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\OrderShipped;
 use App\Mail\OrderConfirmed;
 use App\Mail\OrderDelivered;
+use App\Mail\OrderShipped;
+use Database\Factories\OrderFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Mail;
 
 class Order extends Model
 {
+    /** @use HasFactory<OrderFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'order_number', 'user_id', 'email', 'shipping_name', 'shipping_address',
         'shipping_street', 'shipping_suburb', 'shipping_state', 'shipping_postcode',
@@ -39,9 +44,9 @@ class Order extends Model
     }
 
     public function returnRequests(): HasMany
-{
-    return $this->hasMany(ReturnRequest::class);
-}
+    {
+        return $this->hasMany(ReturnRequest::class);
+    }
 
     // booted() runs once when the model class is first loaded, and is
     // where Eloquent model events (hooks that fire automatically on
@@ -73,7 +78,7 @@ class Order extends Model
             if (! $order->wasChanged('status')) {
                 return;
             }
-        
+
             // Each status only ever triggers its own specific email, and only
             // at the exact moment it transitions to that status — not on every
             // save of an order that's already in that state.
@@ -85,7 +90,7 @@ class Order extends Model
             };
         });
     }
-    
+
     // A return can only be requested once an order has actually been
     // delivered (not while still pending/paid/shipped — the customer
     // doesn't have the item yet), and within a 30-day window after
@@ -102,10 +107,10 @@ class Order extends Model
     }
 
     // Maps the raw database status value to a friendlier customer-facing
-// label. The stored value stays the same ('fulfilled' in the database
-// row, order form, etc.) — only how it's displayed changes, so no
-// data migration is needed for any orders already in this status.
-public function statusLabel(): string
+    // label. The stored value stays the same ('fulfilled' in the database
+    // row, order form, etc.) — only how it's displayed changes, so no
+    // data migration is needed for any orders already in this status.
+    public function statusLabel(): string
     {
         return match ($this->status) {
             'pending' => 'Pending',
@@ -117,12 +122,13 @@ public function statusLabel(): string
             default => ucfirst($this->status),
         };
     }
+
     // Builds a direct tracking link where I'm reasonably confident of the
     // URL format, falls back to null (just show the tracking number as
     // plain text, no clickable link) where I'm not — a broken link is
     // worse than no link. TEST WITH A REAL TRACKING NUMBER before trusting
     // the Australia Post / Sendle links in production.
-public function trackingUrl(): ?string
+    public function trackingUrl(): ?string
     {
         if (! $this->tracking_number || ! $this->carrier) {
             return null;

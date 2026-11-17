@@ -5,13 +5,13 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Rando Jeans — Premium Black Denim')] class extends Component {
-    public Product $featured;
+    public ?Product $featured = null;
     public $shopProducts;
     public \App\Models\SiteSetting $settings;
 
     public function mount(): void
     {
-        $this->featured = Product::where('status', 'active')->firstOrFail();
+        $this->featured = Product::where('status', 'active')->first();
         $this->shopProducts = Product::where('status', 'active')->limit(3)->get();
         $this->settings = \App\Models\SiteSetting::current();
     }
@@ -76,8 +76,11 @@ new #[Title('Rando Jeans — Premium Black Denim')] class extends Component {
                 <p class="font-mono text-xs tracking-widest text-copper-light uppercase mb-4">The Fabric</p>
                 <h2 class="font-display text-3xl md:text-4xl mb-4">Heavyweight. Honest. Built to Last.</h2>
                 <p class="text-neutral-400 leading-relaxed">
-                    {{ $featured->weight_oz }}oz {{ $featured->composition }} denim, woven with a
-                    {{ strtolower($featured->weave) }}. This isn't fast fashion denim — it's built to
+                    @if ($featured)
+                        {{ $featured->weight_oz }}oz {{ $featured->composition }} denim, woven with a
+                        {{ strtolower($featured->weave) }}.
+                    @endif
+                    This isn't fast fashion denim — it's built to
                     hold its shape and fade honestly, the way real jeans should.
                 </p>
                 <a href="{{ route('craft') }}" class="inline-block mt-6 font-mono text-xs uppercase tracking-widest text-copper-light hover:text-bone">
