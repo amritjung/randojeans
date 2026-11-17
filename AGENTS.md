@@ -166,3 +166,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Do NOT delete tests without approval.
 
 </laravel-boost-guidelines>
+
+## Rule precedence
+
+Where ECC rules or skills disagree with the Laravel Boost guidelines above (including Pint formatting and Pest testing), or with patterns already used in this codebase, follow the Boost guidelines and the existing code.
