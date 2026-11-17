@@ -3,6 +3,12 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
+@layer utilities {
+    .-translate-x-full { transform: translateX(-100%); }
+    .translate-x-full { transform: translateX(100%); }
+    .translate-x-0 { transform: translateX(0); }
+}
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Fraunces', serif;

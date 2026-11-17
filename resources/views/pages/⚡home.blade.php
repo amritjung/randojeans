@@ -12,7 +12,7 @@ new #[Title('Rando Jeans — Premium Black Denim')] class extends Component {
     public function mount(): void
     {
         $this->featured = Product::where('status', 'active')->firstOrFail();
-        $this->shopProducts = Product::where('status', 'active')->get();
+        $this->shopProducts = Product::where('status', 'active')->limit(3)->get();
         $this->settings = \App\Models\SiteSetting::current();
     }
 };
